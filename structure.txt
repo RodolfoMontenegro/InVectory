@@ -1,0 +1,14 @@
+inv/
+├── app/
+│   ├── templates/
+│   │   └── index.html             # HTML template for the web interface
+│   ├── __init__.py                # Initializes the Flask application
+│   ├── chromadb_utility.py        # Utility functions for managing ChromaDB
+│   ├── models.py                  # Defines Pydantic models for inventory items
+│   └── routes.py                  # Flask routes for API and frontend
+├── static/                        # Static files (e.g., CSS, JS, images)
+├── data/                          # Data directory for ChromaDB persistence
+├── exports/                       # Exported inventory files (Excel)
+├── requirements.txt               # Required Python libraries
+├── run.py                         # Entry point for running the Flask app
+└── pyvenv.cfg                     # Virtual environment configuration

@@ -1,0 +1,7 @@
+chromadb
+flask
+pandas
+openpyxl
+pydantic
+uuid
+python-dotenv

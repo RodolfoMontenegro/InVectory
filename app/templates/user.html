@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>User Management</h1>
+            <a href="/" class="btn btn-secondary">Home</a>
+        </div>
+        <div id="notification" class="alert" style="display: none;" role="alert"></div>
+
+        <!-- User Info Section -->
+        <div class="text-end mb-3">
+            <p id="user-role" style="display: none;"></p>
+            <button id="logout-button" class="btn btn-warning" style="display:none;" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- User Actions -->
+        <div id="login-section" class="row mt-4">
+            <!-- Login Form -->
+            <div class="col-md-6 offset-md-3">
+                <h4>Login</h4>
+                <form id="login-form">
+                    <div class="mb-3">
+                        <label for="login-username" class="form-label">Username:</label>
+                        <input type="text" class="form-control" id="login-username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="login-password" class="form-label">Password:</label>
+                        <input type="password" class="form-control" id="login-password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Protected Sections -->
+        <div id="protected-sections" style="display: none;">
+            <!-- Admin-Only Section -->
+            <div class="row mt-5">
+                <div class="col-md-6">
+                    <h4>Admin-Only Access</h4>
+                    <button class="btn btn-danger w-100" id="admin-access-button">Access Admin-Only Section</button>
+                </div>
+            </div>
+
+            <!-- Register Section -->
+            <div class="row mt-5">
+                <div class="col-md-6">
+                    <h4>Register</h4>
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label for="register-username" class="form-label">Username:</label>
+                            <input type="text" class="form-control" id="register-username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-password" class="form-label">Password:</label>
+                            <input type="password" class="form-control" id="register-password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-role" class="form-label">Role:</label>
+                            <select class="form-select" id="register-role" name="role">
+                                <option value="user" selected>User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Register</button>
+                    </form>
+                </div>
+
+                <!-- Reset Password Section -->
+                <div class="col-md-6">
+                    <h4>Reset Password</h4>
+                    <form id="reset-password-form">
+                        <div class="mb-3">
+                            <label for="reset-username" class="form-label">Username:</label>
+                            <input type="text" class="form-control" id="reset-username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-password" class="form-label">New Password:</label>
+                            <input type="password" class="form-control" id="new-password" name="new_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">Reset Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const notification = document.getElementById("notification");
+        const loginSection = document.getElementById("login-section");
+        const protectedSections = document.getElementById("protected-sections");
+        const userRoleDisplay = document.getElementById("user-role");
+        const logoutButton = document.getElementById("logout-button");
+
+        function showNotification(message, type) {
+            notification.className = `alert alert-${type}`;
+            notification.textContent = message;
+            notification.style.display = "block";
+            setTimeout(() => {
+                notification.style.display = "none";
+            }, 5000);
+        }
+
+        // Handle Login
+        document.getElementById("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("login-username").value.trim();
+            const password = document.getElementById("login-password").value.trim();
+
+            const response = await fetch("/user/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem("auth_token", result.token); // Store token
+                window.location.href = "/"; // Redirect to main menu
+            } else {
+                showNotification(result.error || "Failed to log in.", "danger");
+            }
+        });
+
+        // Handle Logout
+        function logout() {
+            fetch("/user/logout", { method: "POST" })
+                .then(() => {
+                    localStorage.removeItem("auth_token");
+                    window.location.href = "/user/manage";
+                })
+                .catch(() => {
+                    showNotification("Failed to log out.", "danger");
+                });
+        }
+
+        // On Load, Check for Authentication
+        window.onload = () => {
+            fetch("/user/me", {
+                method: "GET",
+            }).then((response) => {
+                if (response.ok) {
+                    response.json().then((data) => {
+                        userRoleDisplay.textContent = `Role: ${data.role}`;
+                        userRoleDisplay.style.display = "block";
+                        logoutButton.style.display = "inline-block";
+
+                        // Hide login section and show protected sections
+                        loginSection.style.display = "none";
+                        protectedSections.style.display = "block";
+                    });
+                } else {
+                    loginSection.style.display = "block";
+                    protectedSections.style.display = "none";
+                }
+            });
+        };
+
+        // Handle Registration
+        document.getElementById("register-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("register-username").value.trim();
+            const password = document.getElementById("register-password").value.trim();
+            const role = document.getElementById("register-role").value;
+
+            const response = await fetch("/user/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password, role }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showNotification("User registered successfully!", "success");
+                document.getElementById("register-form").reset();
+            } else {
+                showNotification(result.error || "Failed to register user.", "danger");
+            }
+        });
+
+        // Handle Password Reset
+        document.getElementById("reset-password-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("reset-username").value.trim();
+            const newPassword = document.getElementById("new-password").value.trim();
+
+            const response = await fetch("/user/reset_password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, new_password: newPassword }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showNotification("Password reset successfully!", "success");
+                document.getElementById("reset-password-form").reset();
+            } else {
+                showNotification(result.error || "Failed to reset password.", "danger");
+            }
+        });
+    </script>
+</body>
+</html>
