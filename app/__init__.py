@@ -7,6 +7,7 @@ from flask_jwt_extended import JWTManager, unset_jwt_cookies
 from app.chromadb_utility import ChromaDBUtility
 from app.routes import main  # Updated import for the main blueprint
 from app.inventory import inventory  # Import the inventory blueprint
+from app.engineering import engineering  # Import the engineering blueprint
 from app.user import user_bp, login_manager  # Import the user blueprint and LoginManager instance
 
 def create_app():
@@ -34,7 +35,7 @@ def create_app():
     logging.info("Flask app initialized")
 
     # Initialize ChromaDBUtility
-    chroma_db_utility = ChromaDBUtility(persist_directory="./data")
+    chroma_db_utility = ChromaDBUtility(persist_directory="./data")  # Relative to the project root
     app.chroma_db = chroma_db_utility
 
     # Ensure `users` collection is created
@@ -60,6 +61,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(main, url_prefix="/")  # Updated main blueprint
     app.register_blueprint(user_bp, url_prefix="/user")
+    app.register_blueprint(engineering, url_prefix="/engineering")
     app.register_blueprint(inventory, url_prefix="/inventory")
 
     @app.before_request
