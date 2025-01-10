@@ -1,4 +1,5 @@
 import chromadb
+import os
 import logging
 import bcrypt
 import uuid
@@ -9,8 +10,13 @@ from chromadb.utils import embedding_functions
 class ChromaDBUtility:
     def __init__(self, persist_directory="./data"):
         """Initialize ChromaDB persistent client."""
-        self.client = chromadb.PersistentClient(path=persist_directory)
+        # Resolve the path relative to the current file's directory
+        self.persist_directory = os.path.abspath(persist_directory)
+        self.client = chromadb.PersistentClient(path=self.persist_directory)
         self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+
+        # Log the directory being used
+        logging.info(f"ChromaDB initialized with persist_directory: {self.persist_directory}")
 
     def get_or_create_collection(self, collection_name):
         """Get an existing collection or create a new one."""
@@ -243,6 +249,3 @@ class ChromaDBUtility:
                     logging.info(f"Updated user '{metadata['username']}' with ID: {metadata['id']}")
         except Exception as e:
             logging.error(f"Failed to migrate users: {str(e)}")
-
-
-
