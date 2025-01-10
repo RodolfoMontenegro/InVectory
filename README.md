@@ -1,4 +1,5 @@
-# InVectory
+# InVectory 
+![InVectory_logo](https://github.com/user-attachments/assets/6dcb6e17-2602-41b7-830b-5192da3f0d88)
 
 "Revolutionizing Inventory with Vector Intelligence."
 
