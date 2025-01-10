@@ -1,19 +1,20 @@
 import logging
 import bcrypt
 import json
-from json import loads
 from datetime import datetime
-from jwt import ExpiredSignatureError, DecodeError as JWTDecodeError
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, current_app
 from flask_login import login_user, logout_user, current_user, UserMixin, LoginManager
 from flask_jwt_extended import (
-    create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, get_jwt_identity, unset_jwt_cookies, verify_jwt_in_request,
+    create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, get_jwt_identity
 )
-from app.chromadb_utility import ChromaDBUtility
 
 # Initialize Blueprint and utilities
 user_bp = Blueprint("user", __name__)
-chroma_db = ChromaDBUtility()
+
+# Function to get the ChromaDBUtility instance
+def get_chroma_db():
+    """Retrieve the ChromaDBUtility instance from the current Flask app."""
+    return current_app.chroma_db
 
 # Initialize LoginManager
 login_manager = LoginManager()
@@ -30,7 +31,7 @@ class User(UserMixin):
 def load_user(user_id):
     """Load user from ChromaDB by user ID."""
     try:
-        user_data = chroma_db.get_user_by_id(user_id)
+        user_data = get_chroma_db().get_user_by_id(user_id)
         if user_data:
             logging.info(f"Loaded user: {user_data['username']} with ID: {user_data['id']}")
             return User(id=user_data["id"], username=user_data["username"], role=user_data["role"])
@@ -94,7 +95,7 @@ def register():
         return jsonify({"error": "Username and password are required"}), 400
 
     try:
-        chroma_db.add_user(username, password, role)
+        get_chroma_db().add_user(username, password, role)
         return jsonify({"message": "User registered successfully"}), 201
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -120,14 +121,17 @@ def login():
 
     try:
         # Authenticate user
-        user_data = chroma_db.authenticate_user(username, password)
+        user_data = get_chroma_db().authenticate_user(username, password)
         logging.info(
             f"[{datetime.utcnow()}] User login successful: "
             f"Username: {user_data['username']}, Role: {user_data['role']}, ID: {user_data['id']}"
         )
 
+        # Serialize user_data to a JSON string
+        user_identity = json.dumps(user_data)
+
         # Create access token
-        access_token = create_access_token(identity=user_data)
+        access_token = create_access_token(identity=user_identity)
 
         # Set access token in cookies
         response = jsonify({"message": "Login successful"})
@@ -140,7 +144,6 @@ def login():
 
     except ExpiredSignatureError:
         logging.warning(f"[{datetime.utcnow()}] Expired token used for login.")
-        # Clear invalid token from cookies
         response = jsonify({"error": "Session expired. Please log in again."})
         unset_jwt_cookies(response)
         return response, 401
@@ -157,7 +160,6 @@ def logout():
     unset_jwt_cookies(response)  # Clear JWT cookies
     return response, 200
 
-# Reset Password Route
 @user_bp.route("/reset_password", methods=["POST"])
 @jwt_required()
 def reset_password():
@@ -175,21 +177,13 @@ def reset_password():
         return jsonify({"error": "Username and new password are required"}), 400
 
     try:
-        chroma_db.reset_password(username, new_password)
+        get_chroma_db().reset_password(username, new_password)
         return jsonify({"message": "Password reset successfully!"}), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
     except Exception as e:
         logging.error(f"An error occurred while resetting password: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
-
-# Protected route example
-@user_bp.route("/protected", methods=["GET"])
-@jwt_required()
-def protected():
-    """Example of a protected route."""
-    identity = get_jwt_identity()
-    return jsonify({"message": f"Welcome, {identity['username']}!"}), 200
 
 @user_bp.route("/me", methods=["GET"])
 @jwt_required()
@@ -201,7 +195,7 @@ def get_current_user():
             return jsonify({"error": "Not authenticated"}), 401
 
         if isinstance(user_identity, str):
-            user_identity = json.loads(user_identity)  # Ensure it's a dictionary if stored as JSON string
+            user_identity = json.loads(user_identity)
 
         return jsonify(user_identity), 200
     except Exception as e:
