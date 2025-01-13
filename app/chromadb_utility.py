@@ -199,6 +199,7 @@ class ChromaDBUtility:
             logging.info(f"Item added successfully: ID={item_id}, Description='{descripcion}'")
         except Exception as e:
             logging.error(f"Failed to add item to collection '{collection_name}': {str(e)}")
+            raise
 
     def get_all_items(self, collection_name):
         """Retrieve all items from a ChromaDB collection."""
